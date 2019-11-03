@@ -17,6 +17,7 @@
         <module>qingcheng_common_web</module>
         <module>qingcheng_web_portal</module>
         <module>qingcheng_service_goods</module>
+        <module>qingcheng_service_sms</module>
 
 
     </modules>

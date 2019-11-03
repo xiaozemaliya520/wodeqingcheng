@@ -12,9 +12,15 @@ public class User implements Serializable{
 
 	@Id
 	private Integer id;//id
+	private String phone;
 
+	public String getPhone() {
+		return phone;
+	}
 
-	
+	public void setPhone(String phone) {
+		this.phone = phone;
+	}
 
 	private String username;//username
 

@@ -15,6 +15,7 @@
         <module name="qingcheng_service_config" />
         <module name="qingcheng_service_goods" />
         <module name="qingcheng_service_order" />
+        <module name="qingcheng_service_sms" />
         <module name="qingcheng_service_system" />
         <module name="qingcheng_service_user" />
         <module name="qingcheng_web_manager" />

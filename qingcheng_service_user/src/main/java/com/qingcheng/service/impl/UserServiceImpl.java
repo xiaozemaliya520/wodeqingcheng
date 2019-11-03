@@ -1,4 +1,5 @@
 package com.qingcheng.service.impl;
+
 import com.alibaba.dubbo.config.annotation.Service;
 import com.alibaba.fastjson.JSON;
 import com.github.pagehelper.Page;
@@ -26,6 +27,7 @@ public class UserServiceImpl implements UserService {
 
     /**
      * 返回全部记录
+     *
      * @return
      */
     public List<User> findAll() {
@@ -34,18 +36,20 @@ public class UserServiceImpl implements UserService {
 
     /**
      * 分页查询
+     *
      * @param page 页码
      * @param size 每页记录数
      * @return 分页结果
      */
     public PageResult<User> findPage(int page, int size) {
-        PageHelper.startPage(page,size);
+        PageHelper.startPage(page, size);
         Page<User> users = (Page<User>) userMapper.selectAll();
-        return new PageResult<User>(users.getTotal(),users.getResult());
+        return new PageResult<User>(users.getTotal(), users.getResult());
     }
 
     /**
      * 条件查询
+     *
      * @param searchMap 查询条件
      * @return
      */
@@ -56,20 +60,22 @@ public class UserServiceImpl implements UserService {
 
     /**
      * 分页+条件查询
+     *
      * @param searchMap
      * @param page
      * @param size
      * @return
      */
     public PageResult<User> findPage(Map<String, Object> searchMap, int page, int size) {
-        PageHelper.startPage(page,size);
+        PageHelper.startPage(page, size);
         Example example = createExample(searchMap);
         Page<User> users = (Page<User>) userMapper.selectByExample(example);
-        return new PageResult<User>(users.getTotal(),users.getResult());
+        return new PageResult<User>(users.getTotal(), users.getResult());
     }
 
     /**
      * 根据Id查询
+     *
      * @param id
      * @return
      */
@@ -79,6 +85,7 @@ public class UserServiceImpl implements UserService {
 
     /**
      * 新增
+     *
      * @param user
      */
     public void add(User user) {
@@ -87,6 +94,7 @@ public class UserServiceImpl implements UserService {
 
     /**
      * 修改
+     *
      * @param user
      */
     public void update(User user) {
@@ -94,7 +102,8 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
-     *  删除
+     * 删除
+     *
      * @param id
      */
     public void delete(Integer id) {
@@ -105,58 +114,85 @@ public class UserServiceImpl implements UserService {
     private RabbitTemplate rabbitTemplate;
     @Autowired
     private RedisTemplate redisTemplate;
+
     @Override
     public void sendSms(String phone) {
-            int max=999999;
-            int min=10000;
-        Random random=new Random();
-            int code=random.nextInt(max);
-            if(code<min){
-                code+=min;
-            }
-        System.out.println("验证码是："+code);
-            redisTemplate.boundValueOps("code_"+phone).set(code+"");
-            redisTemplate.boundValueOps("code_"+phone).expire(5, TimeUnit.MINUTES);//存活五分钟
-        Map<String,String> map=new HashMap<>();
-        map.put("phone",phone);
-        map.put("code",code+"");
-        rabbitTemplate.convertAndSend("","queue.sms", JSON.toJSONString(map));
-
-
+        int max = 999999;
+        int min = 10000;
+        Random random = new Random();
+        int code = random.nextInt(max);
+        if (code < min) {
+            code += min;
+        }
+        System.out.println("验证码是：" + code);
+        redisTemplate.boundValueOps("code_" + phone).set(code + "");
+        redisTemplate.boundValueOps("code_" + phone).expire(5, TimeUnit.MINUTES);//存活五分钟
+        Map<String, String> map = new HashMap<>();
+        map.put("phone", phone);
+        map.put("code", code + "");
+        rabbitTemplate.convertAndSend("", "queue.sms", JSON.toJSONString(map));
 
 
     }
 
     @Override
-    public void add(User user, String smsCode) {
+    public void addUser(User user, String code) {
+        String str = (String) redisTemplate.boundValueOps("code_" + user.getPhone()).get();
+        if (str == null) {
+            throw new RuntimeException("验证码未发送或已经过期");
+
+        }
+        if (!str.equals(code)){
+            throw new RuntimeException("验证码不要乱输啊 大哥！！");
+        }
+        if (user.getUsername()==null){
+            user.setUsername(user.getPhone());
+        }
+        User newUser = new User();
+        newUser.setUsername(user.getUsername());
+        if(userMapper.selectCount(user)>0){
+            throw new RuntimeException("该手机号已经被注册啦！么么哒");
+
+        }
+        newUser.setBirthday("今天");
+        newUser.setId(new Random(100).nextInt());
+        newUser.setPassword(user.getPassword());
+        userMapper.insert(newUser);
+
 
     }
+
+//    @Override
+//    public void add(User user, String smsCode) {
+//
+//    }
 
     /**
      * 构建查询条件
+     *
      * @param searchMap
      * @return
      */
-    private Example createExample(Map<String, Object> searchMap){
-        Example example=new Example(User.class);
+    private Example createExample(Map<String, Object> searchMap) {
+        Example example = new Example(User.class);
         Example.Criteria criteria = example.createCriteria();
-        if(searchMap!=null){
+        if (searchMap != null) {
             // username
-            if(searchMap.get("username")!=null && !"".equals(searchMap.get("username"))){
-                criteria.andLike("username","%"+searchMap.get("username")+"%");
+            if (searchMap.get("username") != null && !"".equals(searchMap.get("username"))) {
+                criteria.andLike("username", "%" + searchMap.get("username") + "%");
             }
             // password
-            if(searchMap.get("password")!=null && !"".equals(searchMap.get("password"))){
-                criteria.andLike("password","%"+searchMap.get("password")+"%");
+            if (searchMap.get("password") != null && !"".equals(searchMap.get("password"))) {
+                criteria.andLike("password", "%" + searchMap.get("password") + "%");
             }
             // birthday
-            if(searchMap.get("birthday")!=null && !"".equals(searchMap.get("birthday"))){
-                criteria.andLike("birthday","%"+searchMap.get("birthday")+"%");
+            if (searchMap.get("birthday") != null && !"".equals(searchMap.get("birthday"))) {
+                criteria.andLike("birthday", "%" + searchMap.get("birthday") + "%");
             }
 
             // id
-            if(searchMap.get("id")!=null ){
-                criteria.andEqualTo("id",searchMap.get("id"));
+            if (searchMap.get("id") != null) {
+                criteria.andEqualTo("id", searchMap.get("id"));
             }
 
         }
